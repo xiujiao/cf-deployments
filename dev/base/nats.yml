@@ -1,0 +1,21 @@
+---
+instance_groups:
+- name: nats
+  instances: (( grab params.nats_instances ))
+  vm_type: (( grab params.nats_vm_type ))
+  azs: (( grab params.availability_zones ))
+  stemcell: default
+  networks:
+  - (( replace ))
+  - name: (( grab params.cf_internal_network ))
+    static_ips: (( static_ips(0, 1, 2, 3, 4) ))
+  jobs:
+    - name: nats
+      properties:
+        nats:
+          debug: false
+          trace: false
+          user:     nats_user
+          password: (( vault meta.vault "/nats:password" ))
+    - name: metron_agent
+      properties: (( grab meta.metron_agent_properties ))

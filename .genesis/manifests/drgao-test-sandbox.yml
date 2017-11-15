@@ -1,0 +1,1202 @@
+instance_groups:
+- azs:
+  - z1
+  - z2
+  - z3
+  instances: 3
+  jobs:
+  - consumes:
+      consul:
+        from: consul_server
+    name: consul_agent
+    provides:
+      consul:
+        as: consul_server
+    release: consul
+  - name: metron_agent
+    release: loggregator
+  - name: etcd
+    release: etcd
+  - name: etcd_metrics_server
+    release: etcd
+  name: consul_etcd
+  networks:
+  - name: cf-core
+  persistent_disk_pool: consul
+  properties:
+    consul:
+      agent:
+        log_level: info
+        mode: server
+        services:
+          etcd:
+            name: cf-etcd
+      encrypt_keys:
+      - REDACTED
+      server_cert: REDACTED
+      server_key: REDACTED
+  stemcell: default
+  update:
+    max_in_flight: 1
+    serial: true
+  vm_type: small
+- azs:
+  - z1
+  - z2
+  - z3
+  instances: 2
+  jobs:
+  - consumes:
+      consul:
+        from: consul_server
+    name: consul_agent
+    release: consul
+  - name: haproxy
+    release: haproxy
+  - name: metron_agent
+    release: loggregator
+  name: haproxy
+  networks:
+  - name: cf-edge
+    static_ips:
+    - 10.213.13.41
+    - 10.213.13.42
+  stemcell: default
+  vm_extensions:
+  - cf-elb
+  - ssh-elb
+  vm_type: small
+- azs:
+  - z1
+  - z2
+  - z3
+  instances: 2
+  jobs:
+  - consumes:
+      consul:
+        from: consul_server
+    name: consul_agent
+    release: consul
+  - name: nats
+    provides:
+      nats:
+        as: nats
+        shared: true
+    release: nats
+  - name: metron_agent
+    release: loggregator
+  name: nats
+  networks:
+  - name: cf-core
+    static_ips:
+    - 10.213.13.51
+    - 10.213.13.52
+  stemcell: default
+  vm_type: small
+- azs:
+  - z1
+  - z2
+  - z3
+  instances: 1
+  jobs:
+  - consumes:
+      consul:
+        from: consul_server
+    name: consul_agent
+    release: consul
+  - name: postgres
+    release: postgres
+  - name: metron_agent
+    release: loggregator
+  name: postgres
+  networks:
+  - name: cf-db
+    static_ips:
+    - 10.213.13.110
+  persistent_disk_pool: postgres
+  stemcell: default
+  vm_type: large
+- azs:
+  - z1
+  - z2
+  - z3
+  instances: 2
+  jobs:
+  - consumes:
+      consul:
+        from: consul_server
+    name: consul_agent
+    release: consul
+  - name: metron_agent
+    release: loggregator
+  - name: blobstore
+    release: capi
+  - name: route_registrar
+    release: routing
+  name: blobstore
+  networks:
+  - name: cf-core
+  persistent_disk_pool: blobstore
+  properties:
+    consul:
+      agent:
+        services:
+          blobstore: {}
+    route_registrar:
+      routes:
+      - name: blobstore
+        port: 8080
+        registration_interval: 20s
+        tags:
+          component: blobstore
+        uris:
+        - blobstore.system.10.213.13.41.sslip.io
+  stemcell: default
+  vm_type: medium
+- azs:
+  - z1
+  - z2
+  - z3
+  instances: 2
+  jobs:
+  - consumes:
+      consul:
+        from: consul_server
+    name: consul_agent
+    release: consul
+  - name: java-buildpack
+    release: java-buildpack
+  - name: go-buildpack
+    release: go-buildpack
+  - name: binary-buildpack
+    release: binary-buildpack
+  - name: nodejs-buildpack
+    release: nodejs-buildpack
+  - name: ruby-buildpack
+    release: ruby-buildpack
+  - name: php-buildpack
+    release: php-buildpack
+  - name: python-buildpack
+    release: python-buildpack
+  - name: staticfile-buildpack
+    release: staticfile-buildpack
+  - name: dotnet-core-buildpack
+    release: dotnet-core-buildpack
+  - name: cloud_controller_ng
+    provides:
+      cloud_controller:
+        as: cloud_controller
+        shared: true
+    release: capi
+  - name: cloud_controller_worker
+    release: capi
+  - name: cloud_controller_clock
+    release: capi
+  - name: metron_agent
+    release: loggregator
+  - name: statsd_injector
+    release: statsd-injector
+  - name: route_registrar
+    release: routing
+  name: api
+  networks:
+  - name: cf-core
+  properties:
+    consul:
+      agent:
+        services:
+          cloud_controller_ng: {}
+    route_registrar:
+      routes:
+      - name: api
+        port: 9022
+        registration_interval: 20s
+        tags:
+          component: CloudController
+        uris:
+        - api.system.10.213.13.41.sslip.io
+  stemcell: default
+  update:
+    serial: true
+  vm_type: medium
+- azs:
+  - z1
+  - z2
+  - z3
+  instances: 2
+  jobs:
+  - consumes:
+      consul:
+        from: consul_server
+    name: consul_agent
+    release: consul
+  - name: uaa
+    release: uaa
+  - name: metron_agent
+    release: loggregator
+  - name: route_registrar
+    release: routing
+  - name: statsd_injector
+    release: statsd-injector
+  name: uaa
+  networks:
+  - name: cf-core
+  properties:
+    consul:
+      agent:
+        services:
+          uaa: {}
+    route_registrar:
+      routes:
+      - health_check:
+          name: uaa-healthcheck
+          script_path: /var/vcap/jobs/uaa/bin/health_check
+        name: uaa
+        port: 8080
+        registration_interval: 10s
+        tags:
+          component: uaa
+        uris:
+        - uaa.system.10.213.13.41.sslip.io
+        - '*.uaa.system.10.213.13.41.sslip.io'
+        - login.system.10.213.13.41.sslip.io
+        - '*.login.system.10.213.13.41.sslip.io'
+  stemcell: default
+  vm_type: medium
+- azs:
+  - z1
+  - z2
+  - z3
+  instances: 2
+  jobs:
+  - consumes:
+      consul:
+        from: consul_server
+    name: consul_agent
+    release: consul
+  - name: doppler
+    release: loggregator
+  - name: syslog_drain_binder
+    release: loggregator
+  - name: metron_agent
+    release: loggregator
+  name: doppler
+  networks:
+  - name: cf-core
+  properties:
+    consul:
+      agent:
+        services:
+          doppler:
+            name: doppler
+  stemcell: default
+  vm_type: small
+- azs:
+  - z1
+  - z2
+  - z3
+  instances: 2
+  jobs:
+  - consumes:
+      consul:
+        from: consul_server
+    name: consul_agent
+    release: consul
+  - name: loggregator_trafficcontroller
+    release: loggregator
+  - name: route_registrar
+    release: routing
+  - name: metron_agent
+    release: loggregator
+  name: loggregator_trafficcontroller
+  networks:
+  - name: cf-core
+  properties:
+    consul:
+      agent:
+        services:
+          loggregator_trafficcontroller: {}
+    loggregator:
+      uaa:
+        client_secret: REDACTED
+    route_registrar:
+      routes:
+      - name: loggregator
+        port: 8080
+        registration_interval: 20s
+        uris:
+        - loggregator.system.10.213.13.41.sslip.io
+      - name: doppler
+        port: 8081
+        registration_interval: 20s
+        uris:
+        - doppler.system.10.213.13.41.sslip.io
+        - '*.doppler.system.10.213.13.41.sslip.io'
+  stemcell: default
+  vm_type: medium
+- azs:
+  - z1
+  - z2
+  - z3
+  instances: 2
+  jobs:
+  - consumes:
+      consul:
+        from: consul_server
+    name: consul_agent
+    release: consul
+  - name: metron_agent
+    release: loggregator
+  - name: gorouter
+    release: routing
+  name: router
+  networks:
+  - name: cf-edge
+    static_ips:
+    - 10.213.13.31
+    - 10.213.13.32
+  properties:
+    consul:
+      agent:
+        services:
+          gorouter: {}
+  stemcell: default
+  vm_extensions:
+  - cf-elb
+  vm_type: small
+- azs:
+  - z1
+  - z2
+  - z3
+  instances: 2
+  jobs:
+  - consumes:
+      consul:
+        from: consul_server
+    name: consul_agent
+    release: consul
+  - name: bbs
+    release: diego
+  - name: metron_agent
+    release: loggregator
+  - name: cfdot
+    release: diego
+  name: bbs
+  networks:
+  - name: cf-core
+  stemcell: default
+  vm_type: small
+- azs:
+  - z1
+  - z2
+  - z3
+  instances: 2
+  jobs:
+  - consumes:
+      consul:
+        from: consul_server
+    name: consul_agent
+    release: consul
+  - name: auctioneer
+    release: diego
+  - name: stager
+    release: capi
+  - name: nsync
+    release: capi
+  - name: tps
+    release: capi
+  - name: cc_uploader
+    release: capi
+  - name: metron_agent
+    release: loggregator
+  - name: route_emitter
+    release: diego
+  - name: cfdot
+    release: diego
+  name: diego
+  networks:
+  - name: cf-core
+  stemcell: default
+  vm_type: medium
+- azs:
+  - z1
+  - z2
+  - z3
+  instances: 2
+  jobs:
+  - consumes:
+      consul:
+        from: consul_server
+    name: consul_agent
+    release: consul
+  - name: ssh_proxy
+    release: diego
+  - name: metron_agent
+    release: loggregator
+  - name: file_server
+    release: diego
+  - name: cfdot
+    release: diego
+  name: access
+  networks:
+  - name: cf-edge
+    static_ips:
+    - 10.213.13.36
+    - 10.213.13.37
+  stemcell: default
+  vm_extensions:
+  - ssh-elb
+  vm_type: small
+- azs:
+  - z1
+  - z2
+  - z3
+  instances: 3
+  jobs:
+  - consumes:
+      consul:
+        from: consul_server
+    name: consul_agent
+    release: consul
+  - name: garden
+    release: garden-runc
+  - name: cflinuxfs2-rootfs-setup
+    release: cflinuxfs2-rootfs
+  - name: metron_agent
+    release: loggregator
+  - name: cfdot
+    release: diego
+  - name: rep
+    release: diego
+  - name: nfsv3driver
+    release: nfs-volume
+  name: cell
+  networks:
+  - name: cf-runtime
+  properties:
+    tls:
+      ca_cert: REDACTED
+      server_cert: REDACTED
+      server_key: REDACTED
+  stemcell: default
+  update:
+    max_in_flight: 1
+    serial: true
+  vm_type: runtime
+- azs:
+  - z1
+  - z2
+  - z3
+  instances: 1
+  jobs:
+  - name: smoke_tests
+    release: cf-smoke-tests
+  lifecycle: errand
+  name: smoke_tests
+  networks:
+  - name: cf-core
+  stemcell: default
+  vm_type: small
+name: drgao-test-sandbox-cf
+properties:
+  app_domains:
+  - run.10.213.13.41.sslip.io
+  app_ssh:
+    host_key_fingerprint: REDACTED
+    oauth_client_id: ssh-proxy
+  blobstore:
+    admin_users:
+    - password: REDACTED
+      username: blobstore
+    port: 8080
+    secure_link:
+      secret: REDACTED
+    tls:
+      ca_cert: REDACTED
+      cert: REDACTED
+      port: 4443
+      private_key: REDACTED
+  capi:
+    cc_uploader:
+      cc:
+        ca_cert: REDACTED
+        client_cert: REDACTED
+        client_key: REDACTED
+      mutual_tls:
+        ca_cert: REDACTED
+        server_cert: REDACTED
+        server_key: REDACTED
+    nsync:
+      bbs:
+        ca_cert: REDACTED
+        client_cert: REDACTED
+        client_key: REDACTED
+        require_ssl: true
+      cc:
+        base_url: https://api.system.10.213.13.41.sslip.io
+        basic_auth_password: REDACTED
+        basic_auth_username: internal_api_user
+      diego_privileged_containers: true
+    stager:
+      bbs:
+        ca_cert: REDACTED
+        client_cert: REDACTED
+        client_key: REDACTED
+        require_ssl: true
+      cc:
+        basic_auth_password: REDACTED
+        basic_auth_username: internal_api_user
+    tps:
+      bbs:
+        ca_cert: REDACTED
+        client_cert: REDACTED
+        client_key: REDACTED
+        require_ssl: true
+      cc:
+        ca_cert: REDACTED
+        client_cert: REDACTED
+        client_key: REDACTED
+  cc:
+    broker_client_timeout_seconds: 70
+    buildpacks:
+      blobstore_type: webdav
+      buildpack_directory_key: drgao-test-sandbox-cc-buildpacks-REDACTED
+      webdav_config:
+        ca_cert: REDACTED
+        password: REDACTED
+        private_endpoint: https://blobstore.service.cf.internal:4443
+        public_endpoint: https://blobstore.system.10.213.13.41.sslip.io
+        username: blobstore
+    bulk_api_password: REDACTED
+    db_encryption_key: REDACTED
+    db_logging_level: debug2
+    default_app_memory: 256
+    default_running_security_groups:
+    - public_networks
+    - dns
+    - services
+    - load_balancer
+    default_staging_security_groups:
+    - public_networks
+    - dns
+    - services
+    - load_balancer
+    default_to_diego_backend: true
+    droplets:
+      blobstore_type: webdav
+      droplet_directory_key: drgao-test-sandbox-cc-droplets-REDACTED
+      max_staged_droplets_stored: null
+      webdav_config:
+        ca_cert: REDACTED
+        password: REDACTED
+        private_endpoint: https://blobstore.service.cf.internal:4443
+        public_endpoint: https://blobstore.system.10.213.13.41.sslip.io
+        username: blobstore
+    install_buildpacks:
+    - name: staticfile_buildpack
+      package: staticfile-buildpack
+    - name: java_buildpack
+      package: java-buildpack
+    - name: ruby_buildpack
+      package: ruby-buildpack
+    - name: nodejs_buildpack
+      package: nodejs-buildpack
+    - name: go_buildpack
+      package: go-buildpack
+    - name: python_buildpack
+      package: python-buildpack
+    - name: php_buildpack
+      package: php-buildpack
+    - name: binary_buildpack
+      package: binary-buildpack
+    - name: dotnet_core_buildpack
+      package: dotnet-core-buildpack
+    internal_api_password: REDACTED
+    internal_api_user: internal_api_user
+    logging_level: info
+    mutual_tls:
+      ca_cert: REDACTED
+      private_key: REDACTED
+      public_cert: REDACTED
+    packages:
+      app_package_directory_key: drgao-test-sandbox-cc-packages-REDACTED
+      blobstore_type: webdav
+      webdav_config:
+        ca_cert: REDACTED
+        password: REDACTED
+        private_endpoint: https://blobstore.service.cf.internal:4443
+        public_endpoint: https://blobstore.system.10.213.13.41.sslip.io
+        username: blobstore
+    quota_definitions:
+      default:
+        memory_limit: 102400
+        non_basic_services_allowed: true
+        total_reserved_route_ports: 100
+        total_routes: 1000
+        total_service_keys: 1000
+        total_services: 100
+    resource_pool:
+      blobstore_type: webdav
+      resource_directory_key: drgao-test-sandbox-cc-resources-REDACTED
+      webdav_config:
+        ca_cert: REDACTED
+        password: REDACTED
+        private_endpoint: https://blobstore.service.cf.internal:4443
+        public_endpoint: https://blobstore.system.10.213.13.41.sslip.io
+        username: blobstore
+    security_group_definitions:
+    - name: public_networks
+      rules:
+      - destination: 0.0.0.0-9.255.255.255
+        protocol: all
+      - destination: 11.0.0.0-169.253.255.255
+        protocol: all
+      - destination: 169.255.0.0-172.15.255.255
+        protocol: all
+      - destination: 172.32.0.0-192.167.255.255
+        protocol: all
+      - destination: 192.169.0.0-255.255.255.255
+        protocol: all
+    - name: dns
+      rules:
+      - destination: 0.0.0.0/0
+        ports: "53"
+        protocol: tcp
+      - destination: 0.0.0.0/0
+        ports: "53"
+        protocol: udp
+    - name: services
+      rules:
+      - destination: 10.213.13.0/24
+        protocol: all
+    - name: load_balancer
+      rules:
+      - destination: 10.213.13.41
+        protocol: all
+    srv_api_uri: https://api.system.10.213.13.41.sslip.io
+    staging_upload_password: REDACTED
+    staging_upload_user: staging_upload_user
+    volume_services_enabled: true
+  ccdb:
+    address: 10.213.13.110
+    databases:
+    - citext: true
+      name: ccdb
+      tag: cc
+    db_scheme: postgres
+    port: 5432
+    roles:
+    - name: ccadmin
+      password: REDACTED
+      tag: admin
+  cflinuxfs2-rootfs:
+    trusted_certs: null
+  consul:
+    agent:
+      domain: cf.internal
+    agent_cert: REDACTED
+    agent_key: REDACTED
+    ca_cert: REDACTED
+  diego:
+    auctioneer:
+      bbs:
+        ca_cert: REDACTED
+        client_cert: REDACTED
+        client_key: REDACTED
+        require_ssl: true
+      ca_cert: REDACTED
+      rep:
+        ca_cert: REDACTED
+        client_cert: REDACTED
+        client_key: REDACTED
+        require_tls: true
+      server_cert: REDACTED
+      server_key: REDACTED
+    bbs:
+      active_key_label: key1
+      auctioneer:
+        ca_cert: REDACTED
+        client_cert: REDACTED
+        client_key: REDACTED
+      ca_cert: REDACTED
+      encryption_keys:
+      - label: key1
+        passphrase: REDACTED
+      etcd:
+        ca_cert: ""
+        client_cert: ""
+        client_key: ""
+        machines: []
+      rep:
+        ca_cert: REDACTED
+        client_cert: REDACTED
+        client_key: REDACTED
+        require_tls: true
+      server_cert: REDACTED
+      server_key: REDACTED
+      sql:
+        ca_cert: null
+        db_connection_string: postgres://diegoadmin:REDACTED@10.213.13.110:5432/diegodb
+        db_driver: postgres
+        max_open_connections: 500
+        require_ssl: null
+    cfdot:
+      bbs:
+        ca_cert: REDACTED
+        client_cert: REDACTED
+        client_key: REDACTED
+        require_ssl: true
+    rep:
+      bbs:
+        ca_cert: REDACTED
+        client_cert: REDACTED
+        client_key: REDACTED
+        require_ssl: true
+      ca_cert: REDACTED
+      enable_legacy_api_endpoints: false
+      evacuation_timeout_in_seconds: 60
+      listen_addr_admin: null
+      preloaded_rootfses:
+      - cflinuxfs2:/var/vcap/packages/cflinuxfs2/rootfs
+      require_tls: true
+      server_cert: REDACTED
+      server_key: REDACTED
+    route_emitter:
+      bbs:
+        ca_cert: REDACTED
+        client_cert: REDACTED
+        client_key: REDACTED
+        require_ssl: true
+      healthcheck_address: 127.0.0.1:17012
+    skip_cert_verify: false
+    ssh_proxy:
+      bbs:
+        ca_cert: REDACTED
+        client_cert: REDACTED
+        client_key: REDACTED
+        require_ssl: true
+      enable_cf_auth: true
+      host_key: REDACTED
+      uaa:
+        ca_cert: REDACTED
+        port: 8443
+      uaa_secret: REDACTED
+    ssl:
+      skip_cert_verify: false
+  doppler:
+    etcd:
+      ca_cert: REDACTED
+      client_cert: REDACTED
+      client_key: REDACTED
+      dns_suffix: cf-etcd.service.cf.internal
+      machines:
+      - cf-etcd.service.cf.internal
+      peer_require_ssl: true
+      require_ssl: true
+  doppler_endpoint:
+    shared_secret: REDACTED
+  etcd:
+    advertise_urls_dns_suffix: cf-etcd.service.cf.internal
+    ca_cert: REDACTED
+    client_cert: REDACTED
+    client_key: REDACTED
+    cluster:
+    - instances: 3
+      name: consul_etcd
+    dns_suffix: cf-etcd.service.cf.internal
+    machines:
+    - cf-etcd.service.cf.internal
+    peer_ca_cert: REDACTED
+    peer_cert: REDACTED
+    peer_key: REDACTED
+    peer_require_ssl: true
+    require_ssl: true
+    server_cert: REDACTED
+    server_key: REDACTED
+  etcd_metrics_server:
+    etcd:
+      ca_cert: REDACTED
+      client_cert: REDACTED
+      client_key: REDACTED
+      dns_suffix: cf-etcd.service.cf.internal
+      machines:
+      - cf-etcd.service.cf.internal
+      peer_require_ssl: true
+      require_ssl: true
+  garden:
+    default_container_grace_time: 0
+    deny_networks:
+    - 0.0.0.0/0
+    destroy_containers_on_start: true
+    graph_cleanup_threshold_in_mb: 0
+    persistent_image_list:
+    - /var/vcap/packages/cflinuxfs2/rootfs
+  ha_proxy:
+    backend_servers:
+    - 10.213.13.31
+    - 10.213.13.32
+    internal_only_domains: []
+    ssl_pem: null
+    tcp_link_port: 2222
+    trusted_domain_cidrs: ""
+  logger_endpoint:
+    port: 443
+  loggregator:
+    etcd:
+      ca_cert: REDACTED
+      client_cert: REDACTED
+      client_key: REDACTED
+      dns_suffix: cf-etcd.service.cf.internal
+      machines:
+      - cf-etcd.service.cf.internal
+      peer_require_ssl: true
+      require_ssl: true
+    tls:
+      ca_cert: REDACTED
+      doppler:
+        cert: REDACTED
+        key: REDACTED
+      metron:
+        cert: REDACTED
+        key: REDACTED
+      statsd_injector:
+        cert: REDACTED
+        key: REDACTED
+      syslogdrainbinder:
+        cert: REDACTED
+        key: REDACTED
+      trafficcontroller:
+        cert: REDACTED
+        key: REDACTED
+  loggregator_endpoint:
+    shared_secret: REDACTED
+  login:
+    links:
+      passwd: https://login.system.10.213.13.41.sslip.io/forgot_password
+      signup: https://login.system.10.213.13.41.sslip.io/create_account
+    saml:
+      serviceProviderCertificate: REDACTED
+      serviceProviderKey: REDACTED
+      serviceProviderKeyPassword: ""
+  metron_agent:
+    deployment: drgao-test-sandbox-cf
+    etcd:
+      ca_cert: REDACTED
+      client_cert: REDACTED
+      client_key: REDACTED
+      dns_suffix: cf-etcd.service.cf.internal
+      machines:
+      - cf-etcd.service.cf.internal
+      peer_require_ssl: true
+      require_ssl: true
+  metron_endpoint:
+    shared_secret: REDACTED
+  nats:
+    debug: false
+    machines:
+    - 10.213.13.51
+    - 10.213.13.52
+    monitor_port: 9222
+    password: REDACTED
+    port: 4222
+    prof_port: 0
+    trace: false
+    user: nats_user
+  pgpool:
+    databases:
+    - extensions:
+      - citext
+      - pgcrypto
+      name: ccdb
+      users:
+      - ccadmin
+    - extensions:
+      - citext
+      - pgcrypto
+      name: uaadb
+      users:
+      - uaaadmin
+    - extensions:
+      - citext
+      - pgcrypto
+      name: diegodb
+      users:
+      - diegoadmin
+    users:
+    - password: REDACTED
+      username: uaaadmin
+    - password: REDACTED
+      username: ccadmin
+    - password: REDACTED
+      username: diegoadmin
+  postgres:
+    config:
+      listen_addresses: '*'
+      port: 5432
+    hba:
+    - host all all 0.0.0.0/0 md5
+    - host all all ::/0 md5
+    replication:
+      enabled: false
+  router:
+    enable_ssl: false
+    logging_level: info
+    route_services_secret: REDACTED
+    ssl_cert: null
+    ssl_key: null
+    ssl_skip_validation: false
+    status:
+      password: REDACTED
+      user: health
+    tracing:
+      enable_zipkin: true
+  smoke_tests:
+    api: https://api.system.10.213.13.41.sslip.io
+    apps_domain: run.10.213.13.41.sslip.io
+    cf_dial_timeout_in_seconds: 300
+    org: cf_smoke_tests_org
+    password: REDACTED
+    skip_ssl_validation: false
+    space: cf_smoke_tests_space
+    user: admin
+  ssl:
+    skip_cert_verify: false
+  statsd_injector:
+    deployment: system.10.213.13.41.sslip.io
+  syslog_drain_binder:
+    etcd:
+      ca_cert: REDACTED
+      client_cert: REDACTED
+      client_key: REDACTED
+      dns_suffix: cf-etcd.service.cf.internal
+      machines:
+      - cf-etcd.service.cf.internal
+      peer_require_ssl: true
+      require_ssl: true
+  system_domain: system.10.213.13.41.sslip.io
+  system_domain_organization: system
+  traffic_controller:
+    etcd:
+      ca_cert: REDACTED
+      client_cert: REDACTED
+      client_key: REDACTED
+      dns_suffix: cf-etcd.service.cf.internal
+      machines:
+      - cf-etcd.service.cf.internal
+      peer_require_ssl: true
+      require_ssl: true
+  uaa:
+    admin:
+      client_secret: REDACTED
+    ca_cert: REDACTED
+    clients:
+      cc-service-dashboards:
+        authorities: clients.read,clients.write,clients.admin
+        authorized-grant-types: client_credentials
+        scope: openid,cloud_controller_service_permissions.read
+        secret: REDACTED
+      cc_routing:
+        authorities: routing.router_groups.read
+        authorized-grant-types: client_credentials
+        secret: REDACTED
+      cf:
+        access-token-validity: 600
+        authorities: uaa.none
+        authorized-grant-types: password,refresh_token
+        override: true
+        refresh-token-validity: 2592000
+        scope: cloud_controller.read,cloud_controller.write,openid,password.write,cloud_controller.admin,scim.read,scim.write,doppler.firehose,uaa.user,routing.router_groups.read,routing.router_groups.write
+        secret: ""
+      cloud_controller_username_lookup:
+        authorities: scim.userids
+        authorized-grant-types: client_credentials
+        secret: REDACTED
+      doppler:
+        authorities: uaa.resource
+        authorized-grant-types: client_credentials
+        override: true
+        secret: REDACTED
+      firehose:
+        authorities: doppler.firehose,cloud_controller.admin
+        authorized-grant-types: client_credentials
+        scope: openid,oauth.approvals,scim.userids,cloud_controller.read
+        secret: REDACTED
+      gorouter:
+        authorities: routing.routes.read
+        authorized-grant-types: client_credentials
+        secret: REDACTED
+      notifications:
+        authorities: cloud_controller.admin,scim.read
+        authorized-grant-types: client_credentials
+        secret: REDACTED
+      ssh-proxy:
+        authorized-grant-types: authorization_code
+        autoapprove: true
+        override: true
+        redirect-uri: https://uaa.system.system.10.213.13.41.sslip.io/login
+        scope: openid,cloud_controller.read,cloud_controller.write
+        secret: REDACTED
+      tcp_emitter:
+        authorities: routing.routes.write,routing.routes.read,routing.router_groups.read
+        authorized-grant-types: client_credentials
+        secret: REDACTED
+      tcp_router:
+        authorities: routing.routes.read,routing.router_groups.read
+        authorized-grant-types: client_credentials
+        secret: REDACTED
+    issuer: https://uaa.system.10.213.13.41.sslip.io
+    jwt:
+      policy:
+        active_key_id: key-1
+        keys:
+          key-1:
+            signingKey: REDACTED
+    logging_level: info
+    port: 8080
+    scim:
+      users:
+      - groups:
+        - cloud_controller.admin
+        - doppler.firehose
+        - openid
+        - routing.router_groups.read
+        - routing.router_groups.write
+        - scim.write
+        - scim.read
+        - clients.read
+        - clients.write
+        name: admin
+        password: REDACTED
+    ssl:
+      port: 8443
+    sslCertificate: REDACTED
+    sslPrivateKey: REDACTED
+    url: https://uaa.system.10.213.13.41.sslip.io
+    zones:
+      internal:
+        hostnames:
+        - uaa.service.cf.internal
+  uaadb:
+    address: 10.213.13.110
+    databases:
+    - citext: true
+      name: uaadb
+      tag: uaa
+    db_scheme: postgresql
+    port: 5432
+    roles:
+    - name: uaaadmin
+      password: REDACTED
+      tag: admin
+releases:
+- name: binary-buildpack
+  sha1: 09965333c3897aad5b935ec510382c8cbd9e5380
+  url: https://bosh.io/d/github.com/cloudfoundry/binary-buildpack-release?v=1.0.11
+  version: 1.0.11
+- name: capi
+  sha1: 508d842ffcb3fa1e5f5bacc28234be7462c3a5eb
+  url: https://bosh.io/d/github.com/cloudfoundry/capi-release?v=1.30.0
+  version: 1.30.0
+- name: cf-mysql
+  sha1: 87bc9e3fc19030c6feda72e96dd64fc0a2e5d059
+  url: https://bosh.io/d/github.com/cloudfoundry/cf-mysql-release?v=34
+  version: "34"
+- name: cf-smoke-tests
+  sha1: 20a53179144a50c923f8f932495d9535b5e9be43
+  url: https://bosh.io/d/github.com/cloudfoundry/cf-smoke-tests-release?v=18
+  version: "18"
+- name: cflinuxfs2-rootfs
+  sha1: 12b7e2473d0f4e9edc90bc3da873f51e70ede942
+  url: https://bosh.io/d/github.com/cloudfoundry/cflinuxfs2-rootfs-release?v=1.60.0
+  version: 1.60.0
+- name: consul
+  sha1: a0d14e903ce0fc60b7e679701bc459fd0e31b8a0
+  url: https://bosh.io/d/github.com/cloudfoundry-incubator/consul-release?v=160
+  version: "160"
+- name: diego
+  sha1: 38f4b727956a1888776322156b1fd0532462b16d
+  url: https://bosh.io/d/github.com/cloudfoundry/diego-release?v=1.11.0
+  version: 1.11.0
+- name: dotnet-core-buildpack
+  sha1: ee292aa57b7eab52162a7499ad472864df567695
+  url: https://bosh.io/d/github.com/cloudfoundry/dotnet-core-buildpack-release?v=1.0.23
+  version: 1.0.23
+- name: etcd
+  sha1: 695b23a8e4fd2472c015042bb7b298ab7f0780f0
+  url: https://bosh.io/d/github.com/cloudfoundry-incubator/etcd-release?v=99
+  version: "99"
+- name: garden-runc
+  sha1: 1d6020e761806d7f355ceda06c889c582b47dc32
+  url: https://bosh.io/d/github.com/cloudfoundry/garden-runc-release?v=1.4.0
+  version: 1.4.0
+- name: go-buildpack
+  sha1: 18d684a10f27879cf9f76d29e9b1b6da4c885507
+  url: https://bosh.io/d/github.com/cloudfoundry/go-buildpack-release?v=1.7.19
+  version: 1.7.19
+- name: java-buildpack
+  sha1: 293e602f3b68037f479e061d6b0fd934ad356963
+  url: https://bosh.io/d/github.com/cloudfoundry/java-buildpack-release?v=3.14
+  version: "3.14"
+- name: loggregator
+  sha1: 655cfb99245d33bda7640befe780d7f3ff8f4431
+  url: https://bosh.io/d/github.com/cloudfoundry/loggregator?v=82
+  version: "82"
+- name: nats
+  sha1: d1314ce5339c590b2a34f339bf799a5d94c71666
+  url: https://bosh.io/d/github.com/cloudfoundry/nats-release?v=16
+  version: "16"
+- name: nodejs-buildpack
+  sha1: 81c90c9364f432b31aaff96dd1a81c0beea7dbef
+  url: https://bosh.io/d/github.com/cloudfoundry/nodejs-buildpack-release?v=1.5.31
+  version: 1.5.31
+- name: php-buildpack
+  sha1: 28b11df45180bef7e1b49dc595b0fb215901dfed
+  url: https://bosh.io/d/github.com/cloudfoundry/php-buildpack-release?v=4.3.30
+  version: 4.3.30
+- name: python-buildpack
+  sha1: 8460983b3c4664f89114483e342e18ba1b37f421
+  url: https://bosh.io/d/github.com/cloudfoundry/python-buildpack-release?v=1.5.17
+  version: 1.5.17
+- name: routing
+  sha1: c0cbf0a4851a36e16a3d8c8cd735d9f64fc4c702
+  url: https://bosh.io/d/github.com/cloudfoundry-incubator/cf-routing-release?v=0.156.0
+  version: 0.156.0
+- name: ruby-buildpack
+  sha1: 641d7e23b820d864cf0f79c3f2f98fbfe36d008a
+  url: https://bosh.io/d/github.com/cloudfoundry/ruby-buildpack-release?v=1.6.36
+  version: 1.6.36
+- name: staticfile-buildpack
+  sha1: 67a7b01433c131a3b19934e024b034653da3794b
+  url: https://bosh.io/d/github.com/cloudfoundry/staticfile-buildpack-release?v=1.4.2
+  version: 1.4.2
+- name: statsd-injector
+  sha1: fa54cf071b9b9f27fb19cbca5da3683a7872b26a
+  url: https://bosh.io/d/github.com/cloudfoundry/statsd-injector-release?v=1.0.22
+  version: 1.0.22
+- name: uaa
+  sha1: a1b1818fb4f5e722a6c3073d364ce4c400e5fb31
+  url: https://bosh.io/d/github.com/cloudfoundry/uaa-release?v=41
+  version: "41"
+- name: postgres
+  sha1: 8b82c86b7763abdb8f117523b852d1e1c9a20eeb
+  url: https://github.com/cloudfoundry-community/postgres-boshrelease/releases/download/v1.0.4/postgres-1.0.4.tgz
+  version: 1.0.4
+- name: haproxy
+  sha1: 7dea39924dfb05175e2bb97bc9fa5034080dcc1b
+  url: https://github.com/cloudfoundry-incubator/haproxy-boshrelease/releases/download/v8.1.2/haproxy-8.1.2.tgz
+  version: 8.1.2
+- name: nfs-volume
+  sha1: f609a25be32e1fc634e683cc3a89c0aaad1e70f0
+  url: https://bosh.io/d/github.com/cloudfoundry-incubator/nfs-volume-release?v=1.0.7
+  version: 1.0.7
+stemcells:
+- alias: default
+  os: ubuntu-trusty
+  version: latest
+update:
+  canaries: 1
+  canary_watch_time: 30000-120000
+  max_in_flight: 50
+  serial: false
+  update_watch_time: 30000-120000
+

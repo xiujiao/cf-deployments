@@ -1,0 +1,71 @@
+---
+instance_groups:
+- name: consul_etcd
+  vm_extensions:
+  - (( append ))
+  - consul_as
+- name: haproxy
+  vm_extensions:
+  - (( append ))
+  - haproxy_as
+- name: nats
+  vm_extensions:
+  - (( append ))
+  - nats_as
+- name: blobstore
+  vm_extensions:
+  - (( append ))
+  - blobstore_as
+- name: uaa
+  vm_extensions:
+  - (( append ))
+  - uaa_as
+- name: api
+  vm_extensions:
+  - (( append ))
+  - api_as
+- name: cc-worker
+  vm_extensions:
+   - (( append ))
+   - cc-worker_as
+- name: cc-clock
+  vm_extensions:
+  - (( append ))
+  - cc-clock_as
+- name: doppler
+  vm_extensions:
+  - (( append ))
+  - doppler_as
+- name: log-api
+  vm_extensions:
+  - (( append ))
+  - loggregator_tc_as
+- name: router
+  vm_extensions:
+  - (( replace ))  # force replace to remove the cf-elb extension
+  - router_as
+- name: diego-api
+  vm_extensions:
+  - (( append ))
+  - bbs_as
+- name: cc-bridge
+  vm_extensions:
+  - (( append ))
+  - diego_as
+- name: diego-brain
+  vm_extensions:
+  - (( append ))
+  - access_as
+- name: diego-cell
+  vm_extensions:
+  - (( append ))
+  - cell_as
+- name: smoke-tests
+  vm_extensions:
+  - (( append ))
+  - smoketest_as
+
+properties:
+  diego:
+    rep:
+      use_azure_fault_domains: true

@@ -1,0 +1,60 @@
+---
+instance_groups:
+- name: diego-cell
+  migrated_from:
+  -  name: cell
+  instances: (( grab params.cell_instances ))
+  vm_type: (( grab params.cell_vm_type ))
+  azs: (( grab params.availability_zones ))
+  stemcell: default
+  networks:
+  - (( replace ))
+  - name: (( grab params.cf_runtime_network ))
+  update:
+    # To ensure that drain scripts time out + cells update automatically, if there are issues draining
+    canary_watch_time: 30000-720000
+    update_watch_time: 30000-720000
+  jobs:
+  - name: metron_agent
+    properties: (( grab meta.metron_agent_properties ))
+  - name: cfdot
+    properties:
+      diego:
+        cfdot:
+          bbs: (( grab meta.bbs_client ))
+  - name: rep
+    properties:
+      diego:
+        rep:
+          bbs: (( grab meta.bbs_client ))
+          ca_cert: (( grab meta.rep_client.ca_cert ))
+          server_cert: (( vault meta.vault "/diego/certs/rep:certificate" ))
+          server_key:  (( vault meta.vault "/diego/certs/rep:key" ))
+        ssl:
+          skip_cert_verify: (( grab params.skip_ssl_validation ))
+      tls:
+        ca_cert: (( grab instance_groups.diego-cell.jobs.rep.properties.diego.rep.ca_cert ))
+        cert: (( grab instance_groups.diego-cell.jobs.rep.properties.diego.rep.server_cert ))
+        key: (( grab instance_groups.diego-cell.jobs.rep.properties.diego.rep.server_key ))
+  - name: route_emitter
+    properties:
+      diego:
+        route_emitter:
+          bbs: (( grab meta.bbs_client ))
+      uaa:
+        ca_cert: (( grab meta.uaa.ca_cert ))
+        client_secret: (( grab meta.uaa.tcp_emitter_secret ))
+  - name: vxlan-policy-agent
+    properties:
+      cf_networking:
+        vxlan_policy_agent: (( grab meta.network_policy_client ))
+  - name: silk-daemon
+    properties:
+      cf_networking:
+        silk_daemon: (( grab meta.silk_daemon ))
+
+meta:
+  rep_client:
+    ca_cert: (( vault meta.vault "/diego/certs/ca:certificate" ))
+    client_cert: (( vault meta.vault "/diego/certs/rep_client:certificate" ))
+    client_key:  (( vault meta.vault "/diego/certs/rep_client:key" ))

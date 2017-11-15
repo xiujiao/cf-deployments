@@ -1,0 +1,18 @@
+---
+instance_groups:
+- name: smoke-tests
+  vm_type: (( grab params.errand_vm_type ))
+  azs: (( grab params.availability_zones ))
+  stemcell: default
+  networks:
+  - (( replace ))
+  - name: (( grab params.cf_internal_network ))
+  jobs:
+  - name: smoke_tests
+    properties:
+      smoke_tests:
+        api: (( concat "https://api." params.system_domain ))
+        apps_domain: (( grab params.apps_domains[0] ))
+        user:     (( grab meta.admin.user ))
+        password: (( grab meta.admin.password ))
+        skip_ssl_validation: (( grab params.skip_ssl_validation ))
