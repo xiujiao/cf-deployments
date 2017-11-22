@@ -13,7 +13,7 @@ instance_groups:
         cf_dial_timeout_in_seconds: 300
         org: cf_smoke_tests_org
         password: REDACTED
-        skip_ssl_validation: false
+        skip_ssl_validation: true
         space: cf_smoke_tests_space
         user: admin
     release: cf-smoke-tests
@@ -30,7 +30,7 @@ instance_groups:
   - z1
   - z2
   - z3
-  instances: 3
+  instances: 1
   jobs:
   - consumes:
       consul_client:
@@ -88,7 +88,7 @@ instance_groups:
         client_cert: REDACTED
         client_key: REDACTED
         cluster:
-        - instances: 3
+        - instances: 1
           name: consul_etcd
         dns_suffix: cf-etcd.service.cf.internal
         machines:
@@ -142,8 +142,18 @@ instance_groups:
         backend_servers:
         - 10.213.13.31
         - 10.213.13.32
+        disable_tls_10: false
+        disable_tls_11: false
         internal_only_domains: []
-        ssl_pem: null
+        ssl_pem: REDACTED
+        tcp:
+        - backend_port: 80
+          backend_servers:
+          - 10.213.13.31
+          - 10.213.13.32
+          name: wss
+          port: 4443
+          ssl: true
         tcp_link_port: 2222
         trusted_domain_cidrs: ""
     release: haproxy
@@ -288,7 +298,7 @@ instance_groups:
             cert: REDACTED
             key: REDACTED
       ssl:
-        skip_cert_verify: false
+        skip_cert_verify: true
       syslog_drain_binder:
         etcd:
           ca_cert: REDACTED
@@ -1226,7 +1236,7 @@ instance_groups:
       routing_api:
         enabled: true
       ssl:
-        skip_cert_verify: false
+        skip_cert_verify: true
       system_domain: system.10.213.13.41.sslip.io
       system_domain_organization: system
       uaa:
@@ -1272,7 +1282,7 @@ instance_groups:
         enable_ssl: false
         logging_level: info
         route_services_secret: REDACTED
-        ssl_skip_validation: false
+        ssl_skip_validation: true
         status:
           password: REDACTED
           user: health
@@ -1353,7 +1363,7 @@ instance_groups:
             port: 8443
           uaa_secret: REDACTED
         ssl:
-          skip_cert_verify: false
+          skip_cert_verify: true
     release: diego
   - name: file_server
     release: diego
@@ -1404,7 +1414,7 @@ instance_groups:
   - z1
   - z2
   - z3
-  instances: 3
+  instances: 2
   jobs:
   - consumes:
       consul_client:
@@ -1448,7 +1458,7 @@ instance_groups:
           server_cert: REDACTED
           server_key: REDACTED
         ssl:
-          skip_cert_verify: false
+          skip_cert_verify: true
       tls:
         ca_cert: REDACTED
         cert: REDACTED
@@ -1689,7 +1699,7 @@ instance_groups:
       routing_api:
         enabled: true
       ssl:
-        skip_cert_verify: false
+        skip_cert_verify: true
       system_domain: system.10.213.13.41.sslip.io
       system_domain_organization: system
       uaa:
@@ -1869,7 +1879,7 @@ instance_groups:
         uaa:
           client_secret: REDACTED
       ssl:
-        skip_cert_verify: false
+        skip_cert_verify: true
       system_domain: system.10.213.13.41.sslip.io
       traffic_controller:
         etcd:
@@ -1990,12 +2000,12 @@ instance_groups:
           use_http: true
         default_timeout: 180
         include_http_routes: true
-        skip_ssl_validation: false
+        skip_ssl_validation: true
         system_domain: system.10.213.13.41.sslip.io
         tcp_router_group: default-tcp
         verbose: false
       smoke_tests:
-        tcp_apps_domain: 10.213.13.45.sslip.io
+        tcp_apps_domain: 10.213.13.46.sslip.io
       tcp_emitter:
         oauth_secret: REDACTED
     release: routing

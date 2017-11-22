@@ -1,13 +1,14 @@
 ---
 kit:
-  name: dev 
+  name:    dev
   version: latest
   subkits:
   - db-internal-postgres
   - blobstore-webdav
-  - haproxy-notls
+  - haproxy-tls
   - tcp-routing
   - nfs-volume-services
+  - minimum-vms
 
 params:
   env:   drgao-sandbox
@@ -54,7 +55,7 @@ params:
   # SSL certificate validation when connecting over HTTPS
   # This should only be used in non-production environments,
   # if the SSL certs for CF itself are self-signed
-  #skip_ssl_validation: false
+  skip_ssl_validation: true
 
   # Sets the log level for various CF components (API, UAA, router, Consul)
   #log_level: info
@@ -65,9 +66,40 @@ params:
   # handles WebSockets
   #logger_port: 443
 
+  # The `internal_only_domains` are used to tell HA Proxy what domains to refuse requests for
+  # unless the requests originate from addresses in the `trusted_domain_cidrs`. This is
+  # useful for hiding private domains that only your apps should be able to see. Consider
+  # using this even if the domain is not publicly resolvable, as HTTP Host header spoofing
+  # could otherwise be used to access the private apps.
+  #internal_only_domains: []
+
+  # The `trusted_domain_cidrs` are used to whitelist traffic destined for domains in the list
+  # of `internal_only_domains`. If a request goes to an internal only domain, and isn't
+  # from the trusted CIDRs, it is blocked. This should be specified as a space-separated list.
+  #trusted_domain_cidrs: ""
+
+  # Disables TLS v1.0 or v1.1 respectively
+  #disable_tls_10: false
+  #disable_tls_11: false
+
   # This is the domain to be used for the `default-tcp' routing
   # group. It should point to a load balancer that lives in front
   # of the `tcp-router' VMs (or directly to the `tcp-router' VM
   # if load balancers are not used). Any apps pushed to CF using
   # TCP traffic instead of HTTP should use this domain.
-  tcp_apps_domain: 10.213.13.45.sslip.io
+  tcp_apps_domain: 10.213.13.46.sslip.io
+
+  consul_instances:      1
+  haproxy_instances:     2
+  nats_instances:        2
+  uaa_instances:         2
+  api_instances:         2
+  cc-worker_instances:   2
+  doppler_instances:     2
+  loggregator_instances: 2
+  router_instances:      2
+  tcp_router_instances:  2
+  bbs_instances:         2
+  diego_instances:       2
+  access_instances:      2
+  cell_instances:        2  
